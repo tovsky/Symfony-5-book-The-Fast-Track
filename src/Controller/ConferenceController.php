@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Comment;
 use App\Entity\Conference;
 use App\Form\CommentFormType;
+use App\Message\CommentMessage;
 use App\Repository\CommentRepository;
 use App\Repository\ConferenceRepository;
 use App\SpamChecker;
@@ -14,6 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Twig\Environment;
 
@@ -31,15 +33,21 @@ class ConferenceController extends AbstractController
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var MessageBusInterface
+     */
+    private $bus;
 
     public function __construct(
         Environment $twig,
         EntityManagerInterface $entityManager,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        MessageBusInterface $bus
     ) {
         $this->twig = $twig;
         $this->entityManager = $entityManager;
         $this->logger = $logger;
+        $this->bus = $bus;
     }
 
     /**
@@ -77,6 +85,7 @@ class ConferenceController extends AbstractController
             }
 
             $this->entityManager->persist($comment);
+            $this->entityManager->flush();
 
             $context = [
                 'user_ip' => $request->getClientIp(),
@@ -85,11 +94,7 @@ class ConferenceController extends AbstractController
                 'permalink' => $request->getUri(),
             ];
 
-            if (2 === $spamChecker->getSpamScore($comment, $context)) {
-                throw new \RuntimeException('Blatant spam, go away!');
-            }
-
-            $this->entityManager->flush();
+            $this->bus->dispatch(new CommentMessage($comment->getId(), $context));
 
             return $this->redirectToRoute('conference', ['slug' => $conference->getSlug()]);
         }
