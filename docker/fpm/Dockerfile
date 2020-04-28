@@ -25,6 +25,15 @@ RUN rm /etc/localtime
 RUN ln -s /usr/share/zoneinfo/Europe/London /etc/localtime
 RUN "date"
 
+RUN apt-get install -y \
+        librabbitmq-dev \
+        libssh-dev \
+    && docker-php-ext-install \
+        bcmath \
+        sockets \
+    && pecl install amqp \
+    && docker-php-ext-enable amqp
+
 # Type docker-php-ext-install to see available extensions
 RUN docker-php-ext-configure gd
 RUN docker-php-ext-configure intl
