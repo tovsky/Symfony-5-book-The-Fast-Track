@@ -39,5 +39,8 @@ RUN docker-php-ext-configure gd
 RUN docker-php-ext-configure intl
 RUN docker-php-ext-install bcmath gd intl pdo pdo_pgsql soap sodium zip
 
-# add as you need
+RUN apt install -y libxslt-dev \
+    && docker-php-ext-install xsl
+
+# add as you need.
 WORKDIR /var/www/html
